@@ -2,12 +2,14 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
+const cors = require('cors'); // ✅ Add CORS
 
 const app = express();
 app.use(bodyParser.json());
+app.use(cors()); // ✅ Enable cross-origin requests
 app.use(express.static('public'));
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'uuids.json');
 
 const allowedUUIDs = [
@@ -93,4 +95,4 @@ app.get('/secret-data',(req,res)=>{
   res.json({data:"💎 This is protected content!"});
 });
 
-app.listen(PORT,()=>console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
