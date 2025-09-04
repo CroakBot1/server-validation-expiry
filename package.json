@@ -4,7 +4,8 @@
   "description": "Server-based UUID login with 1 month expiration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo 'No build needed for server-only setup'"
   },
   "dependencies": {
     "express": "^4.18.2",
