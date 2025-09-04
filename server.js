@@ -1,13 +1,13 @@
-
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✅ Add CORS
+const cors = require('cors');
+const fetch = require('node-fetch'); // Make sure to install node-fetch if using Node <18
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors()); // ✅ Enable cross-origin requests
+app.use(cors());
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
@@ -57,6 +57,11 @@ function saveData() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(uuidData, null, 2));
 }
 
+// Root route
+app.get('/', (req, res) => {
+  res.send('Server is alive ✅');
+});
+
 // Middleware for protected routes
 app.use((req, res, next) => {
   if (req.path === '/validate-uuid') return next();
@@ -96,4 +101,12 @@ app.get('/secret-data',(req,res)=>{
   res.json({data:"💎 This is protected content!"});
 });
 
+// 🔥 Keep-alive ping every 5 minutes
+setInterval(() => {
+  fetch(`https://server-validation-expiry.onrender.com/`)
+    .then(res => console.log("Keep-alive ping:", res.status))
+    .catch(err => console.error("Ping error:", err));
+}, 5 * 60 * 1000);
+
+// Start server
 app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
