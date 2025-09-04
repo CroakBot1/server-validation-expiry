@@ -1,14 +1,13 @@
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
-const cors = require('cors');
-const cron = require('node-cron');
-const axios = require('axios');
+const cors = require('cors'); // ✅ Add CORS
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors()); // ✅ Enable cross-origin requests
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
@@ -62,66 +61,39 @@ function saveData() {
 app.use((req, res, next) => {
   if (req.path === '/validate-uuid') return next();
   const uuid = req.headers['x-uuid'];
-  if (!uuid || !uuidData[uuid])
-    return res.status(401).json({ valid: false, message: 'Login required' });
+  if (!uuid || !uuidData[uuid]) return res.status(401).json({ valid:false, message:'Login required' });
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const oneMonth = 30*24*60*60*1000;
   const firstLogin = uuidData[uuid].firstLogin;
-  if (now - firstLogin > oneMonth)
-    return res.status(403).json({ valid: false, message: 'UUID expired' });
+  if (now - firstLogin > oneMonth) return res.status(403).json({ valid:false, message:'UUID expired' });
 
   next();
 });
 
 // Validate UUID endpoint
-app.post('/validate-uuid', (req, res) => {
-  const { uuid } = req.body;
-  if (!allowedUUIDs.includes(uuid))
-    return res.json({ valid: false, message: 'UUID NOT RECOGNIZED!' });
+app.post('/validate-uuid', (req,res)=>{
+  const {uuid} = req.body;
+  if (!allowedUUIDs.includes(uuid)) return res.json({valid:false,message:'UUID NOT RECOGNIZED!'});
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const oneMonth = 30*24*60*60*1000;
 
   if (!uuidData[uuid]) {
-    uuidData[uuid] = { firstLogin: now };
+    uuidData[uuid] = {firstLogin: now};
     saveData();
-    return res.json({ valid: true, firstLogin: now, message: 'First login recorded' });
+    return res.json({valid:true, firstLogin: now, message:'First login recorded'});
   } else {
     const firstLogin = uuidData[uuid].firstLogin;
     const expired = now - firstLogin > oneMonth;
-    if (expired) return res.json({ valid: false, message: 'UUID expired. Please login again.' });
-    else return res.json({ valid: true, firstLogin, message: 'UUID still valid' });
+    if (expired) return res.json({valid:false,message:'UUID expired. Please login again.'});
+    else return res.json({valid:true, firstLogin, message:'UUID still valid'});
   }
 });
 
-// Protected route
-app.get('/secret-data', (req, res) => {
-  res.json({ data: "💎 This is protected content!" });
+// Example protected route
+app.get('/secret-data',(req,res)=>{
+  res.json({data:"💎 This is protected content!"});
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-
-  // ----------------------
-  // Optional Internal Keep-alive Cron (local / paid servers)
-  // ----------------------
-  const SERVER_URL =
-    process.env.NODE_ENV === 'production'
-      ? 'https://server-validation-expiry.onrender.com/validate-uuid'
-      : `http://localhost:${PORT}/validate-uuid`;
-  const testUUID = allowedUUIDs[0];
-
-  // Delay first ping 10 sec to avoid startup errors
-  setTimeout(() => {
-    cron.schedule('*/5 * * * *', async () => {
-      try {
-        const response = await axios.post(SERVER_URL, { uuid: testUUID });
-        console.log(`[Keep-Alive] Ping successful: ${response.data.message}`);
-      } catch (err) {
-        console.error('[Keep-Alive] Ping failed:', err.message);
-      }
-    });
-  }, 10000); // 10 sec delay
-});
+app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
