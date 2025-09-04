@@ -2,11 +2,13 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // ✅ Add CORS
+const cors = require('cors');
+const cron = require('node-cron');
+const axios = require('axios');
 
 const app = express();
 app.use(bodyParser.json());
-app.use(cors()); // ✅ Enable cross-origin requests
+app.use(cors());
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
@@ -96,3 +98,18 @@ app.get('/secret-data',(req,res)=>{
 });
 
 app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
+
+// ----------------------
+// Keep-alive cron job
+// ----------------------
+const SERVER_URL = `https://server-validation-expiry.onrender.com/validate-uuid`;
+const testUUID = allowedUUIDs[0];
+
+cron.schedule('*/5 * * * *', async () => {
+  try {
+    const response = await axios.post(SERVER_URL, { uuid: testUUID });
+    console.log(`[Keep-Alive] Ping successful: ${response.data.message}`);
+  } catch (err) {
+    console.error('[Keep-Alive] Ping failed:', err.message);
+  }
+});
