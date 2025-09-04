@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const fetch = require('node-fetch'); // Make sure to install node-fetch if using Node <18
 
 const app = express();
 app.use(bodyParser.json());
