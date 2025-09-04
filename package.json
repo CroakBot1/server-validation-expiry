@@ -2,10 +2,10 @@
   "name": "uuid-server",
   "version": "1.0.0",
   "description": "Server for UUID validation with keep-alive ping",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": ["uuid", "validation", "express", "cors"],
   "author": "Your Name",
