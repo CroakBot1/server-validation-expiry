@@ -100,7 +100,7 @@ app.get('/secret-data',(req,res)=>{
   res.json({data:"💎 This is protected content!"});
 });
 
-// 🔥 Keep-alive ping every 5 minutes
+// 🔥 Keep-alive ping every 5 minutes (Node 22+ has native fetch)
 setInterval(() => {
   fetch(`https://server-validation-expiry.onrender.com/`)
     .then(res => console.log("Keep-alive ping:", res.status))
