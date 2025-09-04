@@ -1,7 +1,7 @@
 {
   "name": "uuid-server-login",
   "version": "1.0.0",
-  "description": "Server-based UUID login with 1 month expiration and keep-alive cron job",
+  "description": "Server-based UUID login with 1 month expiration and optional keep-alive",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
