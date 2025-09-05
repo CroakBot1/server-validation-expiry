@@ -23,6 +23,7 @@ const allowedUUIDs = [
   "8e3a4fd8-d91e-4bc1-a463-2a4ed99d5acb",
   "ef02b73a-0d42-4ef1-90d3-7a0e2fbc6f11",
   "3f8c2b99-3a5f-445c-8c8e-67a4e6b0fcd2",
+
   "7b2f9a01-52c3-4d0a-8b90-1a23f6b7c9e8",
   "91a3d6c5-849f-4768-92c7-b54a2f7d99af",
   "c8e59f1a-0fd2-44c9-92a4-6d7c5e9f8a12",
@@ -33,6 +34,7 @@ const allowedUUIDs = [
   "af1d0b5c-3c9e-42f8-8b71-6d9e2f1a5c3b",
   "1c7e4f9a-52b6-4d8a-9c03-2b9f7e6d4c5a",
   "e9a2c5d1-47f3-45b8-91c6-8f1b2a3d5c7e",
+
   "6d7c8a9b-1e2f-4c3d-9a0b-2c4d5e6f7a8b",
   "0f1a2b3c-4d5e-678f-9012-3456789abcde",
   "abcdef12-3456-7890-abcd-ef1234567890",
@@ -43,6 +45,7 @@ const allowedUUIDs = [
   "90abcdef-1234-5678-90ab-cdef12345678",
   "23456789-0abc-def1-2345-67890abcdef1",
   "34567890-abcd-ef12-3456-7890abcdef12",
+
   "4567890a-bcde-f123-4567-890abcdef123",
   "567890ab-cdef-1234-5678-90abcdef1234",
   "67890abc-def1-2345-6789-0abcdef12345",
@@ -53,6 +56,7 @@ const allowedUUIDs = [
   "bcdef123-4567-890a-bcde-f1234567890a",
   "cdef1234-5678-90ab-cdef-1234567890ab",
   "def12345-6789-0abc-def1-234567890abc",
+
   "ef123456-7890-abcd-ef12-34567890abcd",
   "f1234567-890a-bcde-f123-4567890abcde",
   "01234567-89ab-cdef-0123-456789abcdef",
@@ -63,6 +67,7 @@ const allowedUUIDs = [
   "567890ab-def0-1234-5678-abcdef012345",
   "67890abc-ef12-3456-7890-bcdef0123456",
   "7890abcd-f123-4567-890a-cdef01234567",
+
   "890abcde-0123-4567-89ab-def012345678",
   "90abcdef-1234-5678-90ab-ef0123456789",
   "abcdef01-2345-6789-0abc-f0123456789a",
@@ -73,6 +78,7 @@ const allowedUUIDs = [
   "f1234567-890a-bcde-f123-4567890aef13",
   "01234567-89ab-cdef-0123-4567890aef14",
   "12345678-9abc-def0-1234-567890aef015",
+
   "23456789-abcd-ef01-2345-67890aef0167",
   "34567890-bcde-f123-4567-890aef01789a",
   "4567890a-cdef-1234-5678-90aef0189abc",
@@ -83,6 +89,7 @@ const allowedUUIDs = [
   "90abcdef-1234-5678-90ab-ef023456789a",
   "abcdef01-2345-6789-0abc-ef02456789ab",
   "bcdef123-4567-890a-bcde-f0256789abcd",
+
   "cdef1234-5678-90ab-cdef-026789abcdea",
   "def12345-6789-0abc-def1-02789abcdef1",
   "ef123456-7890-abcd-ef12-0289abcdef12",
@@ -113,76 +120,41 @@ app.get('/', (req, res) => {
 
 // Middleware for protected routes
 app.use((req, res, next) => {
-  if (['/validate-uuid', '/logout-uuid'].includes(req.path)) return next();
-
+  if (req.path === '/validate-uuid') return next();
   const uuid = req.headers['x-uuid'];
-  const sessionId = req.headers['x-session-id'];
-
-  if (!uuid || !uuidData[uuid]) {
-    return res.status(401).json({ valid: false, message: 'Login required' });
-  }
+  if (!uuid || !uuidData[uuid]) return res.status(401).json({ valid:false, message:'Login required' });
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const oneMonth = 30*24*60*60*1000;
   const firstLogin = uuidData[uuid].firstLogin;
-  if (now - firstLogin > oneMonth) {
-    return res.status(403).json({ valid: false, message: 'UUID expired' });
-  }
-
-  if (!sessionId || sessionId != uuidData[uuid].sessionId) {
-    return res.status(403).json({ valid: false, message: 'Another session is already active for this UUID' });
-  }
+  if (now - firstLogin > oneMonth) return res.status(403).json({ valid:false, message:'UUID expired' });
 
   next();
 });
 
-// Validate UUID endpoint (login)
-app.post('/validate-uuid', (req, res) => {
-  const { uuid } = req.body;
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  if (!allowedUUIDs.includes(uuid)) return res.json({ valid: false, message: 'UUID NOT RECOGNIZED!' });
+// Validate UUID endpoint
+app.post('/validate-uuid', (req,res)=>{
+  const {uuid} = req.body;
+  if (!allowedUUIDs.includes(uuid)) return res.json({valid:false,message:'UUID NOT RECOGNIZED!'});
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const oneMonth = 30*24*60*60*1000;
 
   if (!uuidData[uuid]) {
-    uuidData[uuid] = { firstLogin: now, sessionId: Date.now(), ip: clientIp };
+    uuidData[uuid] = {firstLogin: now};
     saveData();
-    return res.json({ valid: true, firstLogin: now, sessionId: uuidData[uuid].sessionId, message: 'First login recorded' });
+    return res.json({valid:true, firstLogin: now, message:'First login recorded'});
   } else {
-    const { firstLogin } = uuidData[uuid];
+    const firstLogin = uuidData[uuid].firstLogin;
     const expired = now - firstLogin > oneMonth;
-
-    if (expired) {
-      uuidData[uuid] = { firstLogin: now, sessionId: Date.now(), ip: clientIp };
-      saveData();
-      return res.json({ valid: true, firstLogin: now, sessionId: uuidData[uuid].sessionId, message: 'UUID re-activated after expiry' });
-    }
-
-    // Always overwrite session (last login wins)
-    uuidData[uuid].sessionId = Date.now();
-    uuidData[uuid].ip = clientIp;
-    saveData();
-
-    return res.json({ valid: true, firstLogin, sessionId: uuidData[uuid].sessionId, message: 'UUID session refreshed' });
-  }
-});
-
-// Logout endpoint
-app.post('/logout-uuid', (req, res) => {
-  const { uuid } = req.body;
-  if (uuidData[uuid]) {
-    uuidData[uuid].sessionId = null;
-    saveData();
-    return res.json({ success: true, message: `UUID ${uuid} logged out` });
-  } else {
-    return res.json({ success: false, message: 'UUID not found' });
+    if (expired) return res.json({valid:false,message:'UUID expired. Please login again.'});
+    else return res.json({valid:true, firstLogin, message:'UUID still valid'});
   }
 });
 
 // Example protected route
-app.get('/secret-data', (req, res) => {
-  res.json({ data: "💎 This is protected content!" });
+app.get('/secret-data',(req,res)=>{
+  res.json({data:"💎 This is protected content!"});
 });
 
 // 🔥 Keep-alive ping every 5 minutes (Node 22+ has native fetch)
@@ -193,4 +165,4 @@ setInterval(() => {
 }, 5 * 60 * 1000);
 
 // Start server
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
