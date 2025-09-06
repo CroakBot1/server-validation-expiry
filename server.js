@@ -184,7 +184,7 @@ app.post('/validate-uuid', (req, res) => {
 
   const now = Date.now();
   const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const fiveMinutes = 5 * 60 * 1000; // changed here too
+  const twentyMinutes = 20 * 60 * 1000; // changed here too
 
   if (!uuidData[uuid]) {
     uuidData[uuid] = { firstLogin: now, ips: { [clientIp]: now } };
@@ -193,7 +193,7 @@ app.post('/validate-uuid', (req, res) => {
   } else {
     const { firstLogin, ips } = uuidData[uuid];
 
-    // Remove inactive IPs (>5 min)
+    // Remove inactive IPs (>20 min)
     for (let ip in ips) {
       if (now - ips[ip] > fiveMinutes) delete ips[ip];
     }
@@ -225,10 +225,10 @@ app.get('/active-ips/:uuid', (req, res) => {
   }
 
   const now = Date.now();
-  const fiveMinutes = 5 * 60 * 1000; // changed here too
+  const fiveMinutes = 20 * 60 * 1000; // changed here too
   const { ips } = uuidData[uuid];
 
-  // Remove inactive IPs (>5 min)
+  // Remove inactive IPs (>20 min)
   for (let ip in ips) {
     if (now - ips[ip] > fiveMinutes) delete ips[ip];
   }
