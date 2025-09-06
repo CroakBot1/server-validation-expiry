@@ -153,16 +153,15 @@ app.use((req, res, next) => {
     if (now - ips[ip] > TWENTY_MINUTES) delete ips[ip];
   }
 
-  // If IP not in list, check limit
+  // FIRST LOGIN WINS
   if (!ips[clientIp]) {
-    const sortedIps = Object.entries(ips).sort((a, b) => a[1] - b[1]);
-    while (Object.keys(ips).length >= MAX_IPS) {
-      const oldestIp = sortedIps.shift()[0];
-      delete ips[oldestIp];
+    if (Object.keys(ips).length >= MAX_IPS) {
+      // Reject new IP if first login active
+      return res.status(403).json({ valid: false, message: '❌ First login active, cannot log in from new IP', ips: Object.keys(ips) });
     }
-    ips[clientIp] = now; // add new IP
+    ips[clientIp] = now; // Add new IP if under limit
   } else {
-    ips[clientIp] = now; // refresh lastActivity for existing IP
+    ips[clientIp] = now; // refresh activity for existing IP
   }
 
   uuidData[uuid].ips = ips;
@@ -175,12 +174,11 @@ app.use((req, res, next) => {
 app.post('/validate-uuid', (req, res) => {
   const { uuid } = req.body;
   const clientIp = getClientIp(req);
+  const now = Date.now();
 
   if (!allowedUUIDs.includes(uuid)) {
     return res.json({ valid: false, message: '❌ UUID NOT RECOGNIZED!' });
   }
-
-  const now = Date.now();
 
   if (!uuidData[uuid]) {
     uuidData[uuid] = { firstLogin: now, ips: { [clientIp]: now } };
@@ -194,16 +192,14 @@ app.post('/validate-uuid', (req, res) => {
       if (now - ips[ip] > TWENTY_MINUTES) delete ips[ip];
     }
 
-    // Enforce MAX_IPS limit
+    // FIRST LOGIN WINS
     if (!ips[clientIp]) {
-      const sortedIps = Object.entries(ips).sort((a, b) => a[1] - b[1]);
-      while (Object.keys(ips).length >= MAX_IPS) {
-        const oldestIp = sortedIps.shift()[0];
-        delete ips[oldestIp];
+      if (Object.keys(ips).length >= MAX_IPS) {
+        return res.json({ valid: false, message: '❌ First login active, cannot log in from new IP', ips: Object.keys(ips) });
       }
-      ips[clientIp] = now;
+      ips[clientIp] = now; // Add new IP if under limit
     } else {
-      ips[clientIp] = now; // refresh activity
+      ips[clientIp] = now; // refresh activity for existing IP
     }
 
     uuidData[uuid].ips = ips;
