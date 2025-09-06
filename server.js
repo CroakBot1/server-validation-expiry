@@ -113,7 +113,14 @@ function saveData() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(uuidData, null, 2));
 }
 
-// Root route
+function getClientIp(req) {
+  let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || "";
+  if (ip.includes("::ffff:")) {
+    ip = ip.split("::ffff:")[1];
+  }
+  return ip;
+}
+
 app.get('/', (req, res) => {
   res.send('Server is alive ✅');
 });
@@ -121,48 +128,94 @@ app.get('/', (req, res) => {
 // Middleware for protected routes
 app.use((req, res, next) => {
   if (req.path === '/validate-uuid') return next();
+
   const uuid = req.headers['x-uuid'];
-  if (!uuid || !uuidData[uuid]) return res.status(401).json({ valid:false, message:'Login required' });
+  const clientIp = getClientIp(req);
+
+  if (!uuid || !uuidData[uuid]) {
+    return res.status(401).json({ valid: false, message: 'Login required' });
+  }
 
   const now = Date.now();
-  const oneMonth = 30*24*60*60*1000;
-  const firstLogin = uuidData[uuid].firstLogin;
-  if (now - firstLogin > oneMonth) return res.status(403).json({ valid:false, message:'UUID expired' });
+  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const tenMinutes = 10 * 60 * 1000;
+
+  const { firstLogin, lastActivity, ip } = uuidData[uuid];
+
+  // Check 1 month lifetime
+  if (now - firstLogin > oneMonth) {
+    return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
+  }
+
+  // Check 10 minutes inactivity
+  if (now - lastActivity > tenMinutes) {
+    return res.status(403).json({ valid: false, message: '⏰ Session expired due to inactivity (10 min)' });
+  }
+
+  // Check IP lock
+  if (ip && ip !== clientIp) {
+    return res.status(403).json({ valid: false, message: `❌ Session locked to another IP (${ip})` });
+  }
+
+  // Refresh activity timestamp
+  uuidData[uuid].lastActivity = now;
+  saveData();
 
   next();
 });
 
 // Validate UUID endpoint
-app.post('/validate-uuid', (req,res)=>{
-  const {uuid} = req.body;
-  if (!allowedUUIDs.includes(uuid)) return res.json({valid:false,message:'UUID NOT RECOGNIZED!'});
+app.post('/validate-uuid', (req, res) => {
+  const { uuid } = req.body;
+  const clientIp = getClientIp(req);
+
+  if (!allowedUUIDs.includes(uuid)) {
+    return res.json({ valid: false, message: '❌ UUID NOT RECOGNIZED!' });
+  }
 
   const now = Date.now();
-  const oneMonth = 30*24*60*60*1000;
+  const oneMonth = 30 * 24 * 60 * 60 * 1000;
+  const tenMinutes = 10 * 60 * 1000;
 
   if (!uuidData[uuid]) {
-    uuidData[uuid] = {firstLogin: now};
+    uuidData[uuid] = { firstLogin: now, lastActivity: now, ip: clientIp };
     saveData();
-    return res.json({valid:true, firstLogin: now, message:'First login recorded'});
+    return res.json({ valid: true, message: '✅ First login recorded', ip: clientIp, expiresInDays: 30 });
   } else {
-    const firstLogin = uuidData[uuid].firstLogin;
-    const expired = now - firstLogin > oneMonth;
-    if (expired) return res.json({valid:false,message:'UUID expired. Please login again.'});
-    else return res.json({valid:true, firstLogin, message:'UUID still valid'});
+    const { firstLogin, lastActivity, ip } = uuidData[uuid];
+    const expiredMonth = now - firstLogin > oneMonth;
+    const expiredInactive = now - lastActivity > tenMinutes;
+
+    if (expiredMonth) {
+      return res.json({ valid: false, message: '❌ UUID expired after 1 month. Please login again.' });
+    }
+
+    if (expiredInactive) {
+      // allow new IP after inactivity expiry
+      uuidData[uuid] = { firstLogin, lastActivity: now, ip: clientIp };
+      saveData();
+      return res.json({ valid: true, message: '♻️ Session expired before, new login accepted', ip: clientIp });
+    }
+
+    if (ip && ip !== clientIp) {
+      return res.json({ valid: false, message: `❌ UUID already in use from another IP (${ip})` });
+    }
+
+    // Refresh active session same IP
+    uuidData[uuid].lastActivity = now;
+    saveData();
+    return res.json({ valid: true, message: '🔄 UUID still valid (activity refreshed)', ip: clientIp });
   }
 });
 
 // Example protected route
-app.get('/secret-data',(req,res)=>{
-  res.json({data:"💎 This is protected content!"});
+app.get('/secret-data', (req, res) => {
+  res.json({ data: "💎 This is protected content!" });
 });
 
-// 🔥 Keep-alive ping every 5 minutes (Node 22+ has native fetch)
+// Keep-alive ping every 5 minutes
 setInterval(() => {
-  fetch(`https://server-validation-expiry.onrender.com/`)
-    .then(res => console.log("Keep-alive ping:", res.status))
-    .catch(err => console.error("Ping error:", err));
+  console.log("Keep-alive ping…");
 }, 5 * 60 * 1000);
 
-// Start server
-app.listen(PORT,()=>console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
