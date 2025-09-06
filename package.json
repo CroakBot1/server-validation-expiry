@@ -1,19 +1,20 @@
 {
-  "name": "uuid-server-login",
+  "name": "uuid-session-server",
   "version": "1.0.0",
-  "description": "Server-based UUID login with 1 month expiration and keep-alive ping",
+  "description": "Express server with UUID session validation (1 UUID = 1 IP, 10 min inactivity timeout).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "echo 'No build needed for server-only setup'",
     "dev": "nodemon server.js"
   },
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
     "body-parser": "^1.20.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.2"
   }
 }
