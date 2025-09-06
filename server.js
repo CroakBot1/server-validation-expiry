@@ -121,6 +121,7 @@ function getClientIp(req) {
   return ip;
 }
 
+// Root route
 app.get('/', (req, res) => {
   res.send('Server is alive ✅');
 });
@@ -142,17 +143,14 @@ app.use((req, res, next) => {
 
   const { firstLogin, lastActivity, ip } = uuidData[uuid];
 
-  // Check 1 month lifetime
   if (now - firstLogin > oneMonth) {
     return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
   }
 
-  // Check 10 minutes inactivity
   if (now - lastActivity > tenMinutes) {
     return res.status(403).json({ valid: false, message: '⏰ Session expired due to inactivity (10 min)' });
   }
 
-  // Check IP lock
   if (ip && ip !== clientIp) {
     return res.status(403).json({ valid: false, message: `❌ Session locked to another IP (${ip})` });
   }
@@ -191,7 +189,6 @@ app.post('/validate-uuid', (req, res) => {
     }
 
     if (expiredInactive) {
-      // allow new IP after inactivity expiry
       uuidData[uuid] = { firstLogin, lastActivity: now, ip: clientIp };
       saveData();
       return res.json({ valid: true, message: '♻️ Session expired before, new login accepted', ip: clientIp });
@@ -201,7 +198,6 @@ app.post('/validate-uuid', (req, res) => {
       return res.json({ valid: false, message: `❌ UUID already in use from another IP (${ip})` });
     }
 
-    // Refresh active session same IP
     uuidData[uuid].lastActivity = now;
     saveData();
     return res.json({ valid: true, message: '🔄 UUID still valid (activity refreshed)', ip: clientIp });
@@ -215,7 +211,10 @@ app.get('/secret-data', (req, res) => {
 
 // Keep-alive ping every 5 minutes
 setInterval(() => {
-  console.log("Keep-alive ping…");
+  fetch(`https://server-validation-expiry.onrender.com/`)
+    .then(res => console.log("Keep-alive ping:", res.status))
+    .catch(err => console.error("Ping error:", err));
 }, 5 * 60 * 1000);
 
+// Start server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
