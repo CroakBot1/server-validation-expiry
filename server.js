@@ -11,6 +11,7 @@ app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'uuids.json');
+const MAX_IPS = 3; // maximum simultaneous IPs per UUID
 
 const allowedUUIDs = [
   "dcc17923-ff5e-4fbf-8dcd-0cc65b48934f",
@@ -139,24 +140,34 @@ app.use((req, res, next) => {
 
   const now = Date.now();
   const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const tenMinutes = 10 * 60 * 1000;
+  const fiveMinutes = 5 * 60 * 1000; // changed from 10 minutes
 
-  const { firstLogin, lastActivity, ip } = uuidData[uuid];
+  const { firstLogin, ips } = uuidData[uuid];
 
+  // UUID expiration
   if (now - firstLogin > oneMonth) {
     return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
   }
 
-  if (now - lastActivity > tenMinutes) {
-    return res.status(403).json({ valid: false, message: '⏰ Session expired due to inactivity (10 min)' });
+  // Remove inactive IPs (>5 min)
+  for (let ip in ips) {
+    if (now - ips[ip] > fiveMinutes) delete ips[ip];
   }
 
-  if (ip && ip !== clientIp) {
-    return res.status(403).json({ valid: false, message: `❌ Session locked to another IP (${ip})` });
+  // If IP not in list, check limit
+  if (!ips[clientIp]) {
+    const sortedIps = Object.entries(ips).sort((a, b) => a[1] - b[1]);
+    while (Object.keys(ips).length >= MAX_IPS) {
+      const oldestIp = sortedIps.shift()[0];
+      delete ips[oldestIp];
+    }
+    ips[clientIp] = now; // add new IP
+  } else {
+    // refresh lastActivity for existing IP
+    ips[clientIp] = now;
   }
 
-  // Refresh activity timestamp
-  uuidData[uuid].lastActivity = now;
+  uuidData[uuid].ips = ips;
   saveData();
 
   next();
@@ -173,35 +184,63 @@ app.post('/validate-uuid', (req, res) => {
 
   const now = Date.now();
   const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const tenMinutes = 10 * 60 * 1000;
+  const fiveMinutes = 5 * 60 * 1000; // changed here too
 
   if (!uuidData[uuid]) {
-    uuidData[uuid] = { firstLogin: now, lastActivity: now, ip: clientIp };
+    uuidData[uuid] = { firstLogin: now, ips: { [clientIp]: now } };
     saveData();
-    return res.json({ valid: true, message: '✅ First login recorded', ip: clientIp, expiresInDays: 30 });
+    return res.json({ valid: true, message: '✅ First login recorded', ips: [clientIp], expiresInDays: 30 });
   } else {
-    const { firstLogin, lastActivity, ip } = uuidData[uuid];
-    const expiredMonth = now - firstLogin > oneMonth;
-    const expiredInactive = now - lastActivity > tenMinutes;
+    const { firstLogin, ips } = uuidData[uuid];
 
-    if (expiredMonth) {
-      return res.json({ valid: false, message: '❌ UUID expired after 1 month. Please login again.' });
+    // Remove inactive IPs (>5 min)
+    for (let ip in ips) {
+      if (now - ips[ip] > fiveMinutes) delete ips[ip];
     }
 
-    if (expiredInactive) {
-      uuidData[uuid] = { firstLogin, lastActivity: now, ip: clientIp };
-      saveData();
-      return res.json({ valid: true, message: '♻️ Session expired before, new login accepted', ip: clientIp });
+    // Enforce MAX_IPS limit
+    if (!ips[clientIp]) {
+      const sortedIps = Object.entries(ips).sort((a, b) => a[1] - b[1]);
+      while (Object.keys(ips).length >= MAX_IPS) {
+        const oldestIp = sortedIps.shift()[0];
+        delete ips[oldestIp];
+      }
+      ips[clientIp] = now;
+    } else {
+      ips[clientIp] = now; // refresh activity
     }
 
-    if (ip && ip !== clientIp) {
-      return res.json({ valid: false, message: `❌ UUID already in use from another IP (${ip})` });
-    }
-
-    uuidData[uuid].lastActivity = now;
+    uuidData[uuid].ips = ips;
     saveData();
-    return res.json({ valid: true, message: '🔄 UUID still valid (activity refreshed)', ip: clientIp });
+
+    return res.json({ valid: true, message: '🔄 UUID still valid (activity refreshed)', ips: Object.keys(ips) });
   }
+});
+
+// Endpoint to view active IPs
+app.get('/active-ips/:uuid', (req, res) => {
+  const { uuid } = req.params;
+  if (!uuidData[uuid]) {
+    return res.status(404).json({ message: 'UUID not found' });
+  }
+
+  const now = Date.now();
+  const fiveMinutes = 5 * 60 * 1000; // changed here too
+  const { ips } = uuidData[uuid];
+
+  // Remove inactive IPs (>5 min)
+  for (let ip in ips) {
+    if (now - ips[ip] > fiveMinutes) delete ips[ip];
+  }
+
+  uuidData[uuid].ips = ips;
+  saveData();
+
+  res.json({
+    uuid,
+    activeIps: Object.keys(ips),
+    lastActivity: Object.fromEntries(Object.entries(ips))
+  });
 });
 
 // Example protected route
