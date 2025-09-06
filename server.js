@@ -12,6 +12,8 @@ app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'uuids.json');
 const MAX_IPS = 1; // maximum simultaneous IPs per UUID
+const TWENTY_MINUTES = 20 * 60 * 1000; // 20 minutes for everything
+const ONE_MONTH = 30 * 24 * 60 * 60 * 1000; // 1 month
 
 const allowedUUIDs = [
   "dcc17923-ff5e-4fbf-8dcd-0cc65b48934f",
@@ -139,19 +141,16 @@ app.use((req, res, next) => {
   }
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const twentyMinutes = 20 * 60 * 1000; // changed from 10 minutes
-
   const { firstLogin, ips } = uuidData[uuid];
 
   // UUID expiration
-  if (now - firstLogin > oneMonth) {
+  if (now - firstLogin > ONE_MONTH) {
     return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
   }
 
   // Remove inactive IPs (>20 min)
   for (let ip in ips) {
-    if (now - ips[ip] > twentyMinutes) delete ips[ip];
+    if (now - ips[ip] > TWENTY_MINUTES) delete ips[ip];
   }
 
   // If IP not in list, check limit
@@ -163,8 +162,7 @@ app.use((req, res, next) => {
     }
     ips[clientIp] = now; // add new IP
   } else {
-    // refresh lastActivity for existing IP
-    ips[clientIp] = now;
+    ips[clientIp] = now; // refresh lastActivity for existing IP
   }
 
   uuidData[uuid].ips = ips;
@@ -183,19 +181,17 @@ app.post('/validate-uuid', (req, res) => {
   }
 
   const now = Date.now();
-  const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const twentyMinutes = 20 * 60 * 1000; // changed here too
 
   if (!uuidData[uuid]) {
     uuidData[uuid] = { firstLogin: now, ips: { [clientIp]: now } };
     saveData();
     return res.json({ valid: true, message: '✅ First login recorded', ips: [clientIp], expiresInDays: 30 });
   } else {
-    const { firstLogin, ips } = uuidData[uuid];
+    const { ips } = uuidData[uuid];
 
     // Remove inactive IPs (>20 min)
     for (let ip in ips) {
-      if (now - ips[ip] > fiveMinutes) delete ips[ip];
+      if (now - ips[ip] > TWENTY_MINUTES) delete ips[ip];
     }
 
     // Enforce MAX_IPS limit
@@ -225,12 +221,10 @@ app.get('/active-ips/:uuid', (req, res) => {
   }
 
   const now = Date.now();
-  const fiveMinutes = 20 * 60 * 1000; // changed here too
   const { ips } = uuidData[uuid];
 
-  // Remove inactive IPs (>20 min)
   for (let ip in ips) {
-    if (now - ips[ip] > fiveMinutes) delete ips[ip];
+    if (now - ips[ip] > TWENTY_MINUTES) delete ips[ip];
   }
 
   uuidData[uuid].ips = ips;
@@ -248,7 +242,7 @@ app.get('/secret-data', (req, res) => {
   res.json({ data: "💎 This is protected content!" });
 });
 
-// Keep-alive ping every 5 minutes
+// Keep-alive ping every 5 minutes (native fetch in Node 22+)
 setInterval(() => {
   fetch(`https://server-validation-expiry.onrender.com/`)
     .then(res => console.log("Keep-alive ping:", res.status))
