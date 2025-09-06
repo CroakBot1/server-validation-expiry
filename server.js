@@ -11,7 +11,7 @@ app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'uuids.json');
-const MAX_IPS = 3; // maximum simultaneous IPs per UUID
+const MAX_IPS = 1; // maximum simultaneous IPs per UUID
 
 const allowedUUIDs = [
   "dcc17923-ff5e-4fbf-8dcd-0cc65b48934f",
