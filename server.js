@@ -149,9 +149,9 @@ app.use((req, res, next) => {
     return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
   }
 
-  // Remove inactive IPs (>5 min)
+  // Remove inactive IPs (>20 min)
   for (let ip in ips) {
-    if (now - ips[ip] > fiveMinutes) delete ips[ip];
+    if (now - ips[ip] > twentyMinutes) delete ips[ip];
   }
 
   // If IP not in list, check limit
