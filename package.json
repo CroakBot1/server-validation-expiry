@@ -1,20 +1,25 @@
 {
-  "name": "uuid-session-server",
+  "name": "uuid-validation-server",
   "version": "1.0.0",
-  "description": "Express server with UUID session validation (1 UUID = 1 IP, 10 min inactivity timeout).",
+  "description": "Express server with UUID validation, session expiration, and IP locking",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server.js"
   },
-  "author": "",
+  "keywords": [
+    "express",
+    "uuid",
+    "validation",
+    "session",
+    "ip-lock"
+  ],
+  "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "node-fetch": "^3.4.1"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
-  }
+  "type": "module"
 }
