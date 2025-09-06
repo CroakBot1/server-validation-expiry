@@ -140,7 +140,7 @@ app.use((req, res, next) => {
 
   const now = Date.now();
   const oneMonth = 30 * 24 * 60 * 60 * 1000;
-  const fiveMinutes = 5 * 60 * 1000; // changed from 10 minutes
+  const twentyMinutes = 20 * 60 * 1000; // changed from 10 minutes
 
   const { firstLogin, ips } = uuidData[uuid];
 
