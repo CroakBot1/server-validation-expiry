@@ -11,9 +11,9 @@
   "author": "Shayne Mawe",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.18.2",
     "body-parser": "^1.20.3",
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "cors": "^2.8.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
