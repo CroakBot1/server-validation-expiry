@@ -1,23 +1,23 @@
 {
-  "name": "uuid-validation-server",
+  "name": "uuid-server",
   "version": "1.0.0",
-  "description": "Express server with UUID validation, session expiration, and IP locking",
+  "description": "UUID validation server with IP tracking and expiration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [
-    "express",
-    "uuid",
-    "validation",
-    "session",
-    "ip-lock"
-  ],
-  "author": "Your Name",
+  "keywords": ["uuid", "express", "ip-tracking", "validation"],
+  "author": "Shayne Mawe",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.2",
+    "body-parser": "^1.20.3",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
-  }
+    "express": "^4.18.2",
+    "node-fetch": "^3.4.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "type": "module"
 }
