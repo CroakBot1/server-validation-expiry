@@ -11,7 +11,7 @@ app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
 const DATA_FILE = path.join(__dirname, 'uuids.json');
-const MAX_IPS = 5; // maximum simultaneous IPs per UUID
+const MAX_IPS = 10; // maximum simultaneous IPs per UUID
 const TWENTY_MINUTES = 20 * 60 * 1000; // 20 minutes for everything
 const ONE_MONTH = 30 * 24 * 60 * 60 * 1000; // 1 month
 
