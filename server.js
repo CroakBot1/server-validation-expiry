@@ -15,6 +15,7 @@ const MAX_IPS = 10; // maximum simultaneous IPs per UUID
 const TWENTY_MINUTES = 20 * 60 * 1000; // 20 minutes for everything
 const ONE_MONTH = 30 * 24 * 60 * 60 * 1000; // 1 month
 
+// ✅ add your valid UUIDs here
 const allowedUUIDs = [
   "cc9c16fb-1386-405d-b345-81d484cb0dc3",
   "b03069b8-aff6-4d05-a74f-731b40053cc3",
