@@ -5043,7 +5043,7 @@ app.get('/', (req, res) => {
   res.send('Server is alive ✅');
 });
 
-// Middleware for protected routes
+// ✅ Middleware for protected routes (skip validation route)
 app.use((req, res, next) => {
   if (req.path === '/validate-uuid') return next();
 
@@ -5057,8 +5057,8 @@ app.use((req, res, next) => {
   const now = Date.now();
   const { firstLogin, ips } = uuidData[uuid];
 
-  // UUID expiration
-  if (now - firstLogin > ONE_MONTH) {
+  // ✅ UUID expiration check (for protected routes)
+  if (firstLogin && now - firstLogin > ONE_MONTH) {
     return res.status(403).json({ valid: false, message: '⏳ UUID expired after 1 month' });
   }
 
@@ -5070,12 +5070,15 @@ app.use((req, res, next) => {
   // FIRST LOGIN WINS
   if (!ips[clientIp]) {
     if (Object.keys(ips).length >= MAX_IPS) {
-      // Reject new IP if first login active
-      return res.status(403).json({ valid: false, message: '❌ First login active, cannot log in from new IP', ips: Object.keys(ips) });
+      return res.status(403).json({
+        valid: false,
+        message: '❌ First login active, cannot log in from new IP',
+        ips: Object.keys(ips)
+      });
     }
-    ips[clientIp] = now; // Add new IP if under limit
+    ips[clientIp] = now;
   } else {
-    ips[clientIp] = now; // refresh activity for existing IP
+    ips[clientIp] = now; // refresh activity
   }
 
   uuidData[uuid].ips = ips;
@@ -5084,7 +5087,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Validate UUID endpoint
+// ✅ Validate UUID endpoint (now includes expiration check)
 app.post('/validate-uuid', (req, res) => {
   const { uuid } = req.body;
   const clientIp = getClientIp(req);
@@ -5094,12 +5097,22 @@ app.post('/validate-uuid', (req, res) => {
     return res.json({ valid: false, message: '❌ UUID NOT RECOGNIZED!' });
   }
 
+  // ✅ Check if expired before doing anything
+  if (uuidData[uuid] && uuidData[uuid].firstLogin && now - uuidData[uuid].firstLogin > ONE_MONTH) {
+    return res.json({ valid: false, message: '⏳ UUID expired after 1 month' });
+  }
+
   if (!uuidData[uuid]) {
     uuidData[uuid] = { firstLogin: now, ips: { [clientIp]: now } };
     saveData();
-    return res.json({ valid: true, message: '✅ First login recorded', ips: [clientIp], expiresInDays: 30 });
+    return res.json({
+      valid: true,
+      message: '✅ First login recorded',
+      ips: [clientIp],
+      expiresInDays: 30
+    });
   } else {
-    const { ips } = uuidData[uuid];
+    const { ips = {} } = uuidData[uuid];
 
     // Remove inactive IPs (>20 min)
     for (let ip in ips) {
@@ -5109,17 +5122,25 @@ app.post('/validate-uuid', (req, res) => {
     // FIRST LOGIN WINS
     if (!ips[clientIp]) {
       if (Object.keys(ips).length >= MAX_IPS) {
-        return res.json({ valid: false, message: '❌ First login active, cannot log in from new IP', ips: Object.keys(ips) });
+        return res.json({
+          valid: false,
+          message: '❌ First login active, cannot log in from new IP',
+          ips: Object.keys(ips)
+        });
       }
-      ips[clientIp] = now; // Add new IP if under limit
+      ips[clientIp] = now;
     } else {
-      ips[clientIp] = now; // refresh activity for existing IP
+      ips[clientIp] = now; // refresh activity
     }
 
     uuidData[uuid].ips = ips;
     saveData();
 
-    return res.json({ valid: true, message: '🔄 UUID still valid (activity refreshed)', ips: Object.keys(ips) });
+    return res.json({
+      valid: true,
+      message: '🔄 UUID still valid (activity refreshed)',
+      ips: Object.keys(ips)
+    });
   }
 });
 
@@ -5152,12 +5173,11 @@ app.get('/secret-data', (req, res) => {
   res.json({ data: "💎 This is protected content!" });
 });
 
-// Keep-alive ping every 5 minutes (native fetch in Node 22+)
+// Keep-alive ping every 5 minutes
 setInterval(() => {
   fetch(`https://server-validation-expiry.onrender.com/`)
     .then(res => console.log("Keep-alive ping:", res.status))
     .catch(err => console.error("Ping error:", err));
 }, 5 * 60 * 1000);
 
-// Start server
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
