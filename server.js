@@ -35,7 +35,6 @@ const allowedUUIDs = [
   "6c9d791a-63a8-4a3d-bfcf-d5c96990e9f6",
   "65346f0d-2eb6-4bb9-976a-00477b0d9bf4",
   "31b2d4cd-2e93-41d5-81b0-1bddc9b893bf",
-  "89084744-b9e0-4aaf-82dc-e6db985abb7d",
   "a4e8a0c1-8c1d-4408-a1f4-e0aed97a559d",
   "c76a8a1d-d793-417c-8370-0dfdff7214f7",
   "2975ad84-4bfd-4fa8-a8f8-c5d4e53ca735",
